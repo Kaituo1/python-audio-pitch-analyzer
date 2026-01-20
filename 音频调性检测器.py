@@ -6,12 +6,11 @@ import sys
 import threading
 import logging
 
-# 配置日志
+# 配置日志 - 只输出到控制台，不生成日志文件
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("detection.log"),
         logging.StreamHandler()
     ]
 )
@@ -413,7 +412,7 @@ class AudioVisualizer:
 class KeyDetectorGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("音频调性检测器")
+        self.root.title("音频调性检测器v1.0.0")
         self.root.geometry("950x900")
         
         # 禁止窗口大小调整
@@ -750,11 +749,37 @@ class KeyDetectorGUI:
         self.progress_label.config(text="结果已清空")
         # 2秒后恢复默认状态
         self.root.after(2000, lambda: self.progress_label.config(text="准备就绪"))
+    
+    def on_closing(self):
+        """处理窗口关闭事件，确保所有资源都能正确释放"""
+        logger.info("正在关闭应用程序，清理资源...")
+        
+        # 1. 清空音频缓存，释放内存
+        if self.visualizer:
+            self.visualizer.clear_cache()
+            # 清理matplotlib资源
+            plt.close(self.visualizer.fig)
+        
+        # 2. 停止所有可能的后台任务
+        self.progress.stop()
+        
+        # 3. 记录关闭日志
+        logger.info("应用程序已成功关闭，所有资源已释放")
+        
+        # 4. 关闭主窗口
+        self.root.destroy()
+        
+        # 5. 确保所有matplotlib窗口都关闭
+        plt.close('all')
 
 def main():
     """主函数，只启动GUI界面"""
     root = tk.Tk()
     app = KeyDetectorGUI(root)
+    
+    # 绑定窗口关闭事件到on_closing方法
+    root.protocol("WM_DELETE_WINDOW", app.on_closing)
+    
     root.mainloop()
 
 if __name__ == "__main__":
